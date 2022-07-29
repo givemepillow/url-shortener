@@ -7,6 +7,7 @@ from aiohttp import web
 from url_shortner.db.base import redis
 
 BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+EXPIRE = 3600 * 60 * 6  # seconds
 
 
 def json_response(
@@ -52,7 +53,7 @@ def cache(func: tp.Callable):
         if long_url:
             return long_url.decode("utf-8")
         long_url = await func(self, short_url)
-        await redis.set(short_url, long_url, ex=3600 * 60 * 24)
+        await redis.set(name=short_url, value=long_url, ex=EXPIRE)
         return long_url
 
     return wrapper
