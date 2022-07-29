@@ -1,0 +1,16 @@
+import os
+
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
+
+import aioredis
+
+Session = sessionmaker(create_async_engine(
+    f"postgresql+asyncpg://{os.environ['DB_URL']}",
+    echo=False,
+    future=True,
+    pool_size=20,
+    max_overflow=10
+), expire_on_commit=False, class_=AsyncSession)
+
+redis = aioredis.from_url(os.environ['REDIS_URL'])
