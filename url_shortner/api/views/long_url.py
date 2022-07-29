@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import insert
 
 from url_shortner.db.model import urls
 from url_shortner.api.schemas import LongURLSchema, ShortURLSchema
-from url_shortner.db.session import Session
+from url_shortner.db.base import Session
 from url_shortner.api.utils import base62_encode, unique_id_generator, json_response
 
 

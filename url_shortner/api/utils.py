@@ -1,7 +1,10 @@
 import random
 import time
+import typing as tp
 
 from aiohttp import web
+
+from url_shortner.db.base import redis
 
 BASE62 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -41,3 +44,15 @@ def unique_id_generator():
         i %= 1000
         yield int(round(time.time() * 1000)) + i
         i += 1
+
+
+def cache(func: tp.Callable):
+    async def wrapper(self, short_url: str):
+        long_url = (await redis.get(short_url))
+        if long_url:
+            return long_url.decode("utf-8")
+        long_url = await func(self, short_url)
+        await redis.set(short_url, long_url, ex=3600 * 60 * 24)
+        return long_url
+
+    return wrapper

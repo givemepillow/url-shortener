@@ -5,7 +5,8 @@ from sqlalchemy import select
 
 from aiohttp_apispec import docs
 
-from url_shortner.db.session import Session
+from url_shortner.api.utils import cache
+from url_shortner.db.base import Session
 from url_shortner.db.model import urls
 
 
@@ -25,6 +26,7 @@ class ShortURLView(web.View):
             return web.HTTPFound(long_url)
         raise web.HTTPNotFound(text='Origin URL not found.')
 
+    @cache
     async def get_long_url(self, short_url: str) -> tp.Optional[str]:
         async with self.session() as s:
             return (await s.execute(select(urls.c.long_url).where(urls.c.short_url == short_url))).scalar()
