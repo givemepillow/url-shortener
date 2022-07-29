@@ -3,6 +3,7 @@ import os
 from aiohttp import web
 
 from aiohttp_apispec import response_schema, request_schema, docs
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 
 from url_shortner.db.model import urls
@@ -13,7 +14,6 @@ from url_shortner.api.utils import base62_encode, unique_id_generator, json_resp
 
 class LongURLView(web.View):
     URL_PATH = "/api/v1/url/shorten"
-    OFFSET = 1000
     ID_GENERATOR = unique_id_generator()
     session = Session
 
@@ -25,22 +25,36 @@ class LongURLView(web.View):
     @request_schema(LongURLSchema())
     @response_schema(ShortURLSchema(), 201)
     async def post(self):
-        long_url = self.request['data'].get('long_url')
-        short_path = self.create_short_url(self.unique_id())
-        await self.save_url(long_url=long_url, short_url=short_path)
+        long_url = self.clear_url(self.request['data'].get('long_url'))
+        short_path = await self.create_short_url(long_url)
         return json_response(
             status=201,
             text_status='Short URL hase benn created!',
             data=ShortURLSchema().dump({"short_url": f"{os.environ['HOST']}/api/v1/{short_path}"})
         )
 
-    def create_short_url(self, unique_id: int):
-        return base62_encode(unique_id + self.OFFSET)
-
     def unique_id(self) -> int:
         return next(self.ID_GENERATOR)
 
-    async def save_url(self, long_url: str, short_url: str) -> None:
+    async def create_short_url(self, long_url: str) -> str:
         async with self.session() as s:
             async with s.begin():
-                await s.execute(insert(urls).values(long_url=long_url, short_url=short_url))
+                _short_url = (await s.execute(
+                    select(urls.c.short_url).
+                    where(urls.c.long_url == long_url)
+                )).scalar()
+                if _short_url:
+                    return _short_url
+                _short_url = base62_encode(self.unique_id())
+                _short_url = (await s.execute(
+                    insert(urls).
+                    values(long_url=long_url, short_url=_short_url).
+                    returning(urls.c.short_url)
+                )).scalar()
+                return _short_url
+
+    @staticmethod
+    def clear_url(long_url):
+        if long_url[-1] == '/':
+            return long_url[:-1]
+        return long_url

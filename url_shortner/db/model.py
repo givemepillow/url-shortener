@@ -20,7 +20,8 @@ urls = Table(
     'urls', metadata,
     Column('id', BigInteger, primary_key=True),
     Column('short_url', String(10), nullable=False, unique=True),
-    Column('long_url', String(2048), nullable=False),
+    Column('long_url', String(2048), nullable=False, unique=True),
     Column('created_at', DateTime, default=func.now(), onupdate=func.now()),
-    Index('idx_short_url', 'short_url', unique=True)
+    Index('idx_short_url', 'short_url', unique=True),
+    Index('idx_long_url', 'long_url', unique=True)
 )
